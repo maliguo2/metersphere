@@ -1077,8 +1077,9 @@ public class ApiAutomationService {
                     TestPlanApiScenario testPlanApiScenario = null;
                     if (request.getScenarioTestPlanIdMap() != null && request.getScenarioTestPlanIdMap().containsKey(apiScenarioWithBLOBs.getId())) {
                         testPlanApiScenario = testPlanApiScenarioMapper.selectByPrimaryKey(request.getScenarioTestPlanIdMap().get(apiScenarioWithBLOBs.getId()));
+                    } else {
+                        this.setScenarioEnv(apiScenarioWithBLOBs);
                     }
-                    // todo 更新运行环境
                     boolean haveEnv = checkScenarioEnv(apiScenarioWithBLOBs, testPlanApiScenario);
                     if (!haveEnv) {
                         builder.append(apiScenarioWithBLOBs.getName()).append("; ");
@@ -1091,6 +1092,29 @@ public class ApiAutomationService {
                 MSException.throwException("场景：" + builder.toString() + "运行环境未配置，请检查!");
             }
         }
+    }
+
+    /**
+     * 设置场景的运行环境 环境组/环境JSON
+     * @param apiScenarioWithBLOBs
+     */
+    private void setScenarioEnv(ApiScenarioWithBLOBs apiScenarioWithBLOBs) {
+        String environmentType = apiScenarioWithBLOBs.getEnvironmentType();
+        String environmentJson = apiScenarioWithBLOBs.getEnvironmentJson();
+        String environmentGroupId = apiScenarioWithBLOBs.getEnvironmentGroupId();
+        if (StringUtils.isBlank(environmentType)) {
+            environmentType = EnvironmentType.JSON.toString();
+        }
+        String definition = apiScenarioWithBLOBs.getScenarioDefinition();
+        MsScenario scenario = JSONObject.parseObject(definition, MsScenario.class);
+        this.parse(definition, scenario);
+        if (StringUtils.equals(environmentType, EnvironmentType.JSON.toString())) {
+            scenario.setEnvironmentMap(JSON.parseObject(environmentJson, Map.class));
+        } else if (StringUtils.equals(environmentType, EnvironmentType.GROUP.toString())) {
+            Map<String, String> map = environmentGroupProjectService.getEnvMap(environmentGroupId);
+            scenario.setEnvironmentMap(map);
+        }
+        apiScenarioWithBLOBs.setScenarioDefinition(JSON.toJSONString(scenario));
     }
 
     /**
@@ -1214,8 +1238,8 @@ public class ApiAutomationService {
         String projectId = request.getProjectId();
         Map<String,ApiScenarioWithBLOBs> scenarioMap = apiScenarios.stream().collect(Collectors.toMap(ApiScenarioWithBLOBs::getId, Function.identity(),(t1, t2)->t1));
         for (Map.Entry<String, String> entry: planScenarioIdMap.entrySet()){
-            String testPlanScenarioId = entry.getKey();
-            String scenarioId = entry.getValue();
+            String scenarioId = entry.getKey();
+            String testPlanScenarioId = entry.getValue();
             ApiScenarioWithBLOBs scenario = scenarioMap.get(scenarioId);
 
 //        }
@@ -1559,9 +1583,14 @@ public class ApiAutomationService {
                             testPlanScenarioId = request.getScenarioTestPlanIdMap().get(item.getId());
                             // 获取场景用例单独的执行环境
                             TestPlanApiScenario planApiScenario = testPlanApiScenarioMapper.selectByPrimaryKey(testPlanScenarioId);
-                            String environment = planApiScenario.getEnvironment();
-                            if (StringUtils.isNotBlank(environment)) {
-                                scenario.setEnvironmentMap(JSON.parseObject(environment, Map.class));
+                            String envJson = planApiScenario.getEnvironment();
+                            String envType = planApiScenario.getEnvironmentType();
+                            String envGroupId = planApiScenario.getEnvironmentGroupId();
+                            if (StringUtils.equals(envType, EnvironmentType.JSON.toString()) && StringUtils.isNotBlank(envJson)) {
+                                scenario.setEnvironmentMap(JSON.parseObject(envJson, Map.class));
+                            } else if (StringUtils.equals(envType, EnvironmentType.GROUP.toString()) && StringUtils.isNotBlank(envGroupId)) {
+                                Map<String, String> envMap = environmentGroupProjectService.getEnvMap(envGroupId);
+                                scenario.setEnvironmentMap(envMap);
                             }
                         }
 
@@ -1603,8 +1632,17 @@ public class ApiAutomationService {
         MsScenario scenario = JSONObject.parseObject(definition, MsScenario.class);
         boolean isEnv = true;
         Map<String, String> envMap = scenario.getEnvironmentMap();
-        if (testPlanApiScenarios != null && StringUtils.isNotEmpty(testPlanApiScenarios.getEnvironment())) {
-            envMap = JSON.parseObject(testPlanApiScenarios.getEnvironment(), Map.class);
+        if (testPlanApiScenarios != null) {
+            String envType = testPlanApiScenarios.getEnvironmentType();
+            String envJson = testPlanApiScenarios.getEnvironment();
+            String envGroupId = testPlanApiScenarios.getEnvironmentGroupId();
+            if (StringUtils.equals(envType, EnvironmentType.JSON.toString())
+                    && StringUtils.isNotBlank(envJson)) {
+                envMap = JSON.parseObject(testPlanApiScenarios.getEnvironment(), Map.class);
+            } else if (StringUtils.equals(envType, EnvironmentType.GROUP.name())
+                    && StringUtils.isNotBlank(envGroupId)) {
+                envMap = environmentGroupProjectService.getEnvMap(envGroupId);
+            }
         }
         ScenarioEnv apiScenarioEnv = getApiScenarioEnv(definition);
         // 所有请求非全路径检查环境

@@ -7,8 +7,14 @@
   >
     <div style="margin-bottom: 10px;">
       <span class="ms-mode-span">{{ $t("commons.environment") }}：</span>
-      <env-popover :project-ids="projectIds" :project-list="projectList" :project-env-map="projectEnvListMap"
-                   @setProjectEnvMap="setProjectEnvMap" @showPopover="showPopover"
+      <env-popover :project-ids="projectIds"
+                   :project-list="projectList"
+                   :project-env-map="projectEnvListMap"
+                   :environment-type.sync="runConfig.environmentType"
+                   :group-id="runConfig.environmentGroupId"
+                   @setEnvGroup="setEnvGroup"
+                   @setProjectEnvMap="setProjectEnvMap"
+                   @showPopover="showPopover"
                    ref="envPopover" class="env-popover"/>
     </div>
     <div>
@@ -76,6 +82,7 @@
 import MsDialogFooter from "@/business/components/common/components/MsDialogFooter";
 import EnvPopover from "@/business/components/track/plan/common/EnvPopover";
 import {strMapToObj} from "@/common/js/utils";
+import {ENV_TYPE} from "@/common/js/constants";
 
 export default {
   name: "MsPlanRunModeWithEnv",
@@ -91,7 +98,9 @@ export default {
         onSampleError: false,
         runWithinResourcePool: false,
         resourcePoolId: null,
-        envMap: new Map()
+        envMap: new Map(),
+        environmentGroupId: "",
+        environmentType: ENV_TYPE.JSON
       },
       projectEnvListMap: {},
       projectList: [],
@@ -118,7 +127,9 @@ export default {
         onSampleError: false,
         runWithinResourcePool: false,
         resourcePoolId: null,
-        envMap: new Map()
+        envMap: new Map(),
+        environmentGroupId: "",
+        environmentType: ENV_TYPE.JSON
       };
       this.runModeVisible = false;
     },
@@ -133,6 +144,9 @@ export default {
     },
     setProjectEnvMap(projectEnvMap) {
       this.runConfig.envMap = strMapToObj(projectEnvMap);
+    },
+    setEnvGroup(id) {
+      this.runConfig.environmentGroupId = id;
     },
     getWsProjects() {
       this.$get("/project/listAll", res => {

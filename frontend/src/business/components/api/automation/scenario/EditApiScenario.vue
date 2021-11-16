@@ -147,12 +147,13 @@
                 <el-col :span="8">
                   <div style="float: right;width: 300px">
                     <env-popover :disabled="scenarioDefinition.length < 1" :env-map="projectEnvMap"
-                                 :project-ids="projectIds" @setProjectEnvMap="setProjectEnvMap"
-                                 :result="envResult" @setEnvGroup="setEnvGroup" :environment-type.sync="environmentType"
+                                 :project-ids="projectIds" :result="envResult"
+                                 :environment-type.sync="environmentType" :isReadOnly="scenarioDefinition.length < 1"
+                                 :group-id="envGroupId" :project-list="projectList"
                                  :show-config-button-with-out-permission="showConfigButtonWithOutPermission"
-                                 :isReadOnly="scenarioDefinition.length < 1" @showPopover="showPopover"
-                                 :group-id="envGroupId"
-                                 :project-list="projectList" ref="envPopover" class="ms-message-right"/>
+                                 @setProjectEnvMap="setProjectEnvMap" @setEnvGroup="setEnvGroup"
+                                 @showPopover="showPopover"
+                                 ref="envPopover" class="ms-message-right"/>
                     <el-tooltip v-if="!debugLoading" content="Ctrl + R" placement="top">
                       <el-dropdown split-button type="primary" @click="runDebug" class="ms-message-right" size="mini" @command="handleCommand" v-permission="['PROJECT_API_SCENARIO:READ+EDIT', 'PROJECT_API_SCENARIO:READ+CREATE']">
                         {{ $t('api_test.request.debug') }}
