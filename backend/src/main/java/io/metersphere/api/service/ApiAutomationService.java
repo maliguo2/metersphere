@@ -1237,8 +1237,8 @@ public class ApiAutomationService {
         String projectId = request.getProjectId();
         Map<String,ApiScenarioWithBLOBs> scenarioMap = apiScenarios.stream().collect(Collectors.toMap(ApiScenarioWithBLOBs::getId, Function.identity(),(t1, t2)->t1));
         for (Map.Entry<String, String> entry: planScenarioIdMap.entrySet()){
-            String scenarioId = entry.getKey();
-            String testPlanScenarioId = entry.getValue();
+            String testPlanScenarioId = entry.getKey();
+            String scenarioId = entry.getValue();
             ApiScenarioWithBLOBs scenario = scenarioMap.get(scenarioId);
 
 //        }
@@ -1255,9 +1255,13 @@ public class ApiAutomationService {
 //                testPlanScenarioId = request.getScenarioTestPlanIdMap().get(item.getId());
                 // 获取场景用例单独的执行环境
                 TestPlanApiScenario planApiScenario = testPlanApiScenarioMapper.selectByPrimaryKey(testPlanScenarioId);
-                String environment = planApiScenario.getEnvironment();
-                if (StringUtils.isNotBlank(environment)) {
-                    planEnvMap = JSON.parseObject(environment, Map.class);
+                String envJson = planApiScenario.getEnvironment();
+                String envType = planApiScenario.getEnvironmentType();
+                String envGroupId = planApiScenario.getEnvironmentGroupId();
+                if (StringUtils.equals(envType, EnvironmentType.JSON.toString()) && StringUtils.isNotBlank(envJson)) {
+                    planEnvMap = JSON.parseObject(envJson, Map.class);
+                } else if (StringUtils.equals(envType, EnvironmentType.GROUP.toString()) && StringUtils.isNotBlank(envGroupId)) {
+                    planEnvMap = environmentGroupProjectService.getEnvMap(envGroupId);
                 }
 //            }
             if(StringUtils.isEmpty(projectId)){
