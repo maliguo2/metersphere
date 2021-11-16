@@ -2004,7 +2004,11 @@ public class TestPlanService {
 
     public String runPlan(TestplanRunRequest testplanRunRequest) {
         if (MapUtils.isNotEmpty(testplanRunRequest.getEnvMap())) {
-            this.setPlanCaseEnv(testplanRunRequest.getTestPlanId(), testplanRunRequest.getEnvMap());
+            RunModeConfig runModeConfig = new RunModeConfig();
+            runModeConfig.setEnvMap(testplanRunRequest.getEnvMap());
+            runModeConfig.setEnvironmentType(testplanRunRequest.getEnvironmentType());
+            runModeConfig.setEnvironmentGroupId(testplanRunRequest.getEnvironmentGroupId());
+            this.setPlanCaseEnv(testplanRunRequest.getTestPlanId(), runModeConfig);
         }
 
         ApiRunConfigDTO api = new ApiRunConfigDTO();
@@ -2021,18 +2025,18 @@ public class TestPlanService {
                 testplanRunRequest.getUserId(), testplanRunRequest.getTriggerMode(), apiRunConfig);
     }
 
-    public void setPlanCaseEnv(String planId, Map<String, String> envMap) {
+    public void setPlanCaseEnv(String planId, RunModeConfig runModeConfig) {
         TestPlanApiCaseExample caseExample = new TestPlanApiCaseExample();
         caseExample.createCriteria().andTestPlanIdEqualTo(planId);
         List<TestPlanApiCase> testPlanApiCases = testPlanApiCaseMapper.selectByExample(caseExample);
         List<String> planApiCaseIds = testPlanApiCases.stream().map(TestPlanApiCase::getId).collect(Collectors.toList());
-        testPlanApiCaseService.setApiCaseEnv(planApiCaseIds, envMap);
+        testPlanApiCaseService.setApiCaseEnv(planApiCaseIds, runModeConfig.getEnvMap());
 
         TestPlanApiScenarioExample scenarioExample = new TestPlanApiScenarioExample();
         scenarioExample.createCriteria().andTestPlanIdEqualTo(planId);
         List<TestPlanApiScenario> testPlanApiScenarios = testPlanApiScenarioMapper.selectByExample(scenarioExample);
         List<String> planScenarioIds = testPlanApiScenarios.stream().map(TestPlanApiScenario::getId).collect(Collectors.toList());
-        testPlanScenarioCaseService.setScenarioEnv(planScenarioIds, envMap);
+        testPlanScenarioCaseService.setScenarioEnv(planScenarioIds, runModeConfig);
     }
 
     public void editReportConfig(TestPlanDTO testPlanDTO) {

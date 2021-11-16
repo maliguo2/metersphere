@@ -10,9 +10,15 @@
       <el-radio :label="ENV_TYPE.JSON">环境列表</el-radio>
       <el-radio :label="ENV_TYPE.GROUP">环境组</el-radio>
     </el-radio-group>
-    <env-select :project-ids="projectIds" :env-map="envMap" @close="visible = false" :result="result"
-                :show-config-button-with-out-permission="showConfigButtonWithOutPermission" v-show="!radio || radio === ENV_TYPE.JSON"
-                ref="envSelect" @setProjectEnvMap="setProjectEnvMap" :project-list="projectList"/>
+    <env-select :project-ids="projectIds"
+                :result="result"
+                :show-config-button-with-out-permission="showConfigButtonWithOutPermission"
+                :env-map="envMap"
+                :project-list="projectList"
+                @close="visible = false"
+                @setProjectEnvMap="setProjectEnvMap"
+                v-show="!radio || radio === ENV_TYPE.JSON"
+                ref="envSelect"/>
     <!-- todo 如果工作空间下的环境组都不包含当前项目则不显示 -->
     <env-group ref="envGroup" v-show="radio === ENV_TYPE.GROUP" @close="visible = false"
                @setEnvGroup="setEnvGroup" :group-id="groupId"></env-group>

@@ -5,12 +5,17 @@ import com.alibaba.fastjson.JSON;
 import io.metersphere.base.domain.ApiTestEnvironmentExample;
 import io.metersphere.base.domain.ApiTestEnvironmentWithBLOBs;
 import io.metersphere.base.domain.EnvironmentGroupProject;
+import io.metersphere.base.domain.EnvironmentGroupProjectExample;
 import io.metersphere.base.mapper.ApiTestEnvironmentMapper;
+import io.metersphere.base.mapper.EnvironmentGroupProjectMapper;
 import io.metersphere.base.mapper.ext.ExtEnvGroupProjectMapper;
 import io.metersphere.dto.EnvironmentGroupProjectDTO;
+import org.jsoup.internal.StringUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
+
 import javax.annotation.Resource;
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +34,8 @@ public class EnvironmentGroupProjectService {
     private ExtEnvGroupProjectMapper extEnvGroupProjectMapper;
     @Resource
     private ApiTestEnvironmentMapper apiTestEnvironmentMapper;
+    @Resource
+    private EnvironmentGroupProjectMapper environmentGroupProjectMapper;
 
     public List<EnvironmentGroupProjectDTO> getList(String groupId) {
         List<EnvironmentGroupProjectDTO> list = extEnvGroupProjectMapper.getList(groupId);
@@ -56,5 +63,23 @@ public class EnvironmentGroupProjectService {
         Map<String, String> map = list.stream()
                 .collect(Collectors.toMap(EnvironmentGroupProject::getProjectId, EnvironmentGroupProject::getEnvironmentId));
         return map;
+    }
+
+    public void deleteRelateEnv(String environmentId) {
+        if (StringUtil.isBlank(environmentId)) {
+            return;
+        }
+        EnvironmentGroupProjectExample example = new EnvironmentGroupProjectExample();
+        example.createCriteria().andEnvironmentGroupIdEqualTo(environmentId);
+        environmentGroupProjectMapper.deleteByExample(example);
+    }
+
+    public void deleteRelateProject(String projectId) {
+        if (StringUtil.isBlank(projectId)) {
+            return;
+        }
+        EnvironmentGroupProjectExample example = new EnvironmentGroupProjectExample();
+        example.createCriteria().andProjectIdEqualTo(projectId);
+        environmentGroupProjectMapper.deleteByExample(example);
     }
 }

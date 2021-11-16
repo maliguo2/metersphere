@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import io.metersphere.api.dto.EnvironmentType;
 import io.metersphere.api.dto.automation.*;
 import io.metersphere.api.service.ApiAutomationService;
 import io.metersphere.api.service.ApiScenarioReportService;
@@ -171,8 +172,16 @@ public class TestPlanScenarioCaseService {
         if (CollectionUtils.isEmpty(planCaseIdList)) {
             MSException.throwException("未找到执行场景！");
         }
-        if (testPlanScenarioRequest.getConfig() != null && !testPlanScenarioRequest.getConfig().getEnvMap().isEmpty()) {
-            this.setScenarioEnv(planCaseIdList, testPlanScenarioRequest.getConfig().getEnvMap());
+        RunModeConfig config = testPlanScenarioRequest.getConfig();
+        if (config != null) {
+            String envType = config.getEnvironmentType();
+            String envGroupId = config.getEnvironmentGroupId();
+            Map<String, String> envMap = config.getEnvMap();
+            if ((StringUtils.equals(envType, EnvironmentType.JSON.toString()) && !envMap.isEmpty())
+                    || (StringUtils.equals(envType, EnvironmentType.GROUP.toString()) && StringUtils.isNotBlank(envGroupId))) {
+                // 更新场景用例环境信息，运行时从数据库读取最新环境
+                this.setScenarioEnv(planCaseIdList, testPlanScenarioRequest.getConfig());
+            }
         }
         planCaseIdList.forEach(item -> {
             idStr.append("\"").append(item).append("\"").append(",");
@@ -199,34 +208,53 @@ public class TestPlanScenarioCaseService {
         return apiAutomationService.run(request);
     }
 
-    public void setScenarioEnv(List<String> planScenarioIds, Map<String, String> envMap) {
-        if (CollectionUtils.isEmpty(planScenarioIds)) {
-            return;
-        }
+    public void setScenarioEnv(List<String> planScenarioIds, RunModeConfig runModeConfig) {
+        SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
         TestPlanApiScenarioExample testPlanApiScenarioExample = new TestPlanApiScenarioExample();
         testPlanApiScenarioExample.createCriteria().andIdIn(planScenarioIds);
         List<TestPlanApiScenario> testPlanApiScenarios = testPlanApiScenarioMapper.selectByExampleWithBLOBs(testPlanApiScenarioExample);
-        SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
         TestPlanApiScenarioMapper mapper = sqlSession.getMapper(TestPlanApiScenarioMapper.class);
-        for (TestPlanApiScenario testPlanApiScenario : testPlanApiScenarios) {
-            String env = testPlanApiScenario.getEnvironment();
-            if (StringUtils.isBlank(env)) {
-                continue;
+
+        String environmentType = runModeConfig.getEnvironmentType();
+        String environmentGroupId = runModeConfig.getEnvironmentGroupId();
+
+        if (StringUtils.equals(environmentType, EnvironmentType.JSON.toString())) {
+            Map<String, String> envMap = runModeConfig.getEnvMap();
+            if (CollectionUtils.isEmpty(planScenarioIds)) {
+                return;
             }
-            Map<String, String> map = JSON.parseObject(env, Map.class);
-            if (map.isEmpty()) {
-                continue;
-            }
-            Set<String> set = map.keySet();
-            for (String s : set) {
-                if (StringUtils.isNotBlank(envMap.get(s))) {
-                    map.put(s, envMap.get(s));
+            for (TestPlanApiScenario testPlanApiScenario : testPlanApiScenarios) {
+                String env = testPlanApiScenario.getEnvironment();
+                if (StringUtils.isBlank(env)) {
+                    continue;
                 }
+                Map<String, String> map = JSON.parseObject(env, Map.class);
+                if (map.isEmpty()) {
+                    continue;
+                }
+                Set<String> set = map.keySet();
+                for (String s : set) {
+                    if (StringUtils.isNotBlank(envMap.get(s))) {
+                        map.put(s, envMap.get(s));
+                    }
+                }
+                testPlanApiScenario.setEnvironmentType(EnvironmentType.JSON.toString());
+                testPlanApiScenario.setEnvironment(JSON.toJSONString(map));
+                mapper.updateByPrimaryKeyWithBLOBs(testPlanApiScenario);
             }
-            testPlanApiScenario.setEnvironment(JSON.toJSONString(map));
-            mapper.updateByPrimaryKeyWithBLOBs(testPlanApiScenario);
+            sqlSession.flushStatements();
+            return;
         }
-        sqlSession.flushStatements();
+
+        if (StringUtils.equals(environmentType, EnvironmentType.GROUP.toString())) {
+            for (TestPlanApiScenario testPlanApiScenario : testPlanApiScenarios) {
+                testPlanApiScenario.setEnvironmentType(EnvironmentType.GROUP.toString());
+                testPlanApiScenario.setEnvironmentGroupId(environmentGroupId);
+                mapper.updateByPrimaryKeyWithBLOBs(testPlanApiScenario);
+            }
+            sqlSession.flushStatements();
+        }
+
     }
 
     public List<TestPlanApiScenario> getCasesByPlanId(String planId) {
