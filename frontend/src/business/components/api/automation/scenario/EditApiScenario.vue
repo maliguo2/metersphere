@@ -544,7 +544,14 @@ export default {
           onSampleError: this.onSampleError,
           projectId: this.currentScenario.projectId ? this.currentScenario.projectId : this.projectId,
         };
-        this.$post("/api/automation/setDomain", {definition: JSON.stringify(scenario)}, res => {
+        let param = {
+          definition: JSON.stringify(scenario),
+          environmentType: this.environmentType,
+          environmentMap: strMapToObj(this.projectEnvMap),
+          environmentGroupId: this.envGroupId,
+          environmentEnable: false,
+        };
+        this.$post("/api/automation/setDomain", param, res => {
           if (res.data) {
             let data = JSON.parse(res.data);
             this.scenarioDefinition = data.hashTree;
@@ -1545,6 +1552,7 @@ export default {
     },
     setEnvGroup(id) {
       this.envGroupId = id;
+      this.setDomain(true);
     },
     setEnvType(val) {
       this.environmentType = val;

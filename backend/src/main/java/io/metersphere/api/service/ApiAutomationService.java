@@ -718,15 +718,40 @@ public class ApiAutomationService {
         return apiScenarioMapper.selectByPrimaryKey(id);
     }
 
-    public String setDomain(String scenarioDefinition) {
+    public String setDomain(ApiScenarioEnvRequest request) {
+        Boolean enable = request.getEnvironmentEnable();
+        String scenarioDefinition = request.getDefinition();
         JSONObject element = JSON.parseObject(scenarioDefinition);
+        Map<String, String> environmentMap = new HashMap<>();
+        if (BooleanUtils.isFalse(enable)) {
+            String envType = request.getEnvironmentType();
+            String envGroupId = request.getEnvironmentGroupId();
+            if (StringUtils.equals(envType, EnvironmentType.GROUP.name())) {
+                environmentMap = environmentGroupProjectService.getEnvMap(envGroupId);
+            } else if (StringUtils.equals(envType, EnvironmentType.JSON.name())) {
+                environmentMap = request.getEnvironmentMap();
+            }
+        } else {
+            String scenarioId = request.getId();
+            ApiScenarioWithBLOBs apiScenarioWithBLOBs = apiScenarioMapper.selectByPrimaryKey(scenarioId);
+            String environmentType = apiScenarioWithBLOBs.getEnvironmentType();
+            String environmentGroupId = apiScenarioWithBLOBs.getEnvironmentGroupId();
+            String environmentJson = apiScenarioWithBLOBs.getEnvironmentJson();
+            if (StringUtils.equals(environmentType, EnvironmentType.GROUP.name())) {
+                environmentMap = environmentGroupProjectService.getEnvMap(environmentGroupId);
+            } else if (StringUtils.equals(environmentType, EnvironmentType.JSON.name())) {
+                environmentMap = JSON.parseObject(environmentJson, Map.class);
+            }
+        }
+
+
         ParameterConfig config = new ParameterConfig();
         Map<String, EnvironmentConfig> envConfig = new HashMap<>(16);
-        Map<String, String> environmentMap = (Map<String, String>) element.get("environmentMap");
         if (environmentMap != null && !environmentMap.isEmpty()) {
+            Map<String, String> finalEnvironmentMap = environmentMap;
             environmentMap.keySet().forEach(projectId -> {
                 ApiTestEnvironmentService environmentService = CommonBeanFactory.getBean(ApiTestEnvironmentService.class);
-                ApiTestEnvironmentWithBLOBs environment = environmentService.get(environmentMap.get(projectId));
+                ApiTestEnvironmentWithBLOBs environment = environmentService.get(finalEnvironmentMap.get(projectId));
                 if (environment != null && environment.getConfig() != null) {
                     EnvironmentConfig env = JSONObject.parseObject(environment.getConfig(), EnvironmentConfig.class);
                     env.setApiEnvironmentid(environment.getId());
