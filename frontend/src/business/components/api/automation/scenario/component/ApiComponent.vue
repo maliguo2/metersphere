@@ -167,7 +167,8 @@ export default {
     projectList: Array,
     expandedNode: Array,
     envMap: Map,
-    message: String
+    message: String,
+    environmentGroupId: String
   },
   components: {
     TemplateComponent,
@@ -231,6 +232,9 @@ export default {
       this.forStatus();
       this.reload();
     },
+    environmentGroupId(val) {
+      this.getEnvironments(val);
+    }
   },
   computed: {
     displayColor() {
@@ -339,14 +343,31 @@ export default {
         this.request.environmentId = this.environment.id;
       }
     },
-    getEnvironments() {
+    getEnvironments(groupId) {
       this.environment = {};
-      let id = this.envMap.get(this.request.projectId);
-      if (id) {
-        this.$get('/api/environment/get/' + id, response => {
-          this.environment = response.data;
-          this.initDataSource();
-        });
+      let id = undefined;
+      if (groupId) {
+        this.$get("/environment/group/project/map/" + groupId, res => {
+          let data = res.data;
+          if (data) {
+            id = new Map(Object.entries(data)).get(this.request.projectId);
+            if (id) {
+              this.$get('/api/environment/get/' + id, response => {
+                this.environment = response.data;
+                console.log(this.environment);
+                this.initDataSource();
+              });
+            }
+          }
+        })
+      } else {
+        id = this.envMap.get(this.request.projectId);
+        if (id) {
+          this.$get('/api/environment/get/' + id, response => {
+            this.environment = response.data;
+            this.initDataSource();
+          });
+        }
       }
     },
     remove() {

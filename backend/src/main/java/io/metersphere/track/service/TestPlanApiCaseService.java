@@ -604,7 +604,7 @@ public class TestPlanApiCaseService {
     }
 
     public void setApiCaseEnv(List<String> planIds, Map<String, String> map) {
-        if (CollectionUtils.isEmpty(planIds)) {
+        if (CollectionUtils.isEmpty(planIds) || (map != null && map.isEmpty())) {
             return;
         }
 

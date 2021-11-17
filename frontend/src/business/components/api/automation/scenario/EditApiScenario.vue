@@ -204,6 +204,7 @@
                          :node="node"
                          :project-list="projectList"
                          :env-map="projectEnvMap"
+                         :env-group-id="envGroupId"
                          @remove="remove"
                          @copyRow="copyRow"
                          @suggestClick="suggestClick"
@@ -278,9 +279,13 @@
             :scenarioDefinition="scenarioDefinition"
             :enableCookieShare="enableCookieShare"
             :onSampleError="onSampleError"
+            :environment-type="environmentType"
+            :group-id="envGroupId"
             :execDebug="stopDebug"
             :isFullUrl.sync="isFullUrl"
             :clearMessage="clearMessage"
+            @setEnvType="setEnvType"
+            @envGroupId="setEnvGroup"
             @closePage="close"
             @unFullScreen="unFullScreen"
             @showAllBtn="showAllBtn"
@@ -1540,6 +1545,9 @@ export default {
     },
     setEnvGroup(id) {
       this.envGroupId = id;
+    },
+    setEnvType(val) {
+      this.environmentType = val;
     },
     getWsProjects() {
       this.$get("/project/listAll", res => {
